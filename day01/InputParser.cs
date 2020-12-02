@@ -19,17 +19,5 @@ namespace day01
 
             return numbers;
         }
-
-        public static List<int> ParseCSV(string filename)
-        {
-            var lines = File.ReadAllLines(filename);
-
-            var numbers = new List<int>();
-            var numberStrings = lines[0].Split(new[] { "," }, StringSplitOptions.None);
-
-            Array.ForEach(numberStrings, n => numbers.Add(int.Parse(n)));
-
-            return numbers;
-        }
     }
 }

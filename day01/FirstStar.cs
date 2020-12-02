@@ -7,23 +7,23 @@ namespace day01
 {
     public class FirstStar
     {
-        public static Result Run(List<int> parameter)
+        public static string Run(List<int> parameter)
         {
-            for (int i = 0; i < parameter.Count; i++)
+            for (int firstNumberIndex = 0; firstNumberIndex < parameter.Count; firstNumberIndex++)
             {
-                for (int y = 0; y < parameter.Count; y++)
+                for (int secondNumberIndex = 0; secondNumberIndex < parameter.Count; secondNumberIndex++)
                 {
-                    if (parameter[i] + parameter[y] == 2020)
+                    var firstNumber = parameter[firstNumberIndex];
+                    var secondNumber = parameter[secondNumberIndex];
+
+                    if (firstNumber + secondNumber == 2020)
                     {
-                        return new Result
-                        {
-                            Data = parameter[i] * parameter[y],
-                            Text = (parameter[i] * parameter[y]).ToString()
-                        };
+                        var product = firstNumber * secondNumber;
+                        return product.ToString();
                     }
                 }
             }
-            return new Result();
+            return string.Empty;
         }
     }
 }

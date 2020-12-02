@@ -10,11 +10,11 @@ namespace day01
 
             Console.WriteLine("---- Part 01 ----");
             var part1 = FirstStar.Run(input);
-            Console.WriteLine($"Result: {part1.Text}");
+            Console.WriteLine($"Result: {part1}");
 
             Console.WriteLine("---- Part 02 ----");
             var part2 = SecondStar.Run(input);
-            Console.WriteLine($"Result: {part2.Text}");
+            Console.WriteLine($"Result: {part2}");
 
             Console.WriteLine("-----------------");
             Console.WriteLine($"1) Copy {part1} to Clipboard");
@@ -26,11 +26,11 @@ namespace day01
 
             if (key.Key == ConsoleKey.D1)
             {
-                WindowsClipboard.SetText(part1.Text);
+                WindowsClipboard.SetText(part1);
             }
             else if (key.Key == ConsoleKey.D2)
             {
-                WindowsClipboard.SetText(part2.Text);
+                WindowsClipboard.SetText(part2);
             }
         }
     }
