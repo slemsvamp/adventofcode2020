@@ -25,8 +25,7 @@ namespace day03
                 if (y >= mapSource.Length)
                     break;
 
-                if (x >= map[y].Length)
-                    Extend(mapSource, map);
+                x = x % map[y].Length;
 
                 var isTree = map[y][x].ToString() == "#";
 
@@ -34,14 +33,7 @@ namespace day03
                     trees += 1;
             }
 
-
             return trees.ToString();
-        }
-
-        public static void Extend(string[] mapSource, string[] map)
-        {
-            for (int mapSourceIndex = 0; mapSourceIndex < mapSource.Length; mapSourceIndex++)
-                map[mapSourceIndex] += mapSource[mapSourceIndex];
         }
     }
 }

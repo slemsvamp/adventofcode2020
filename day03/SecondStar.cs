@@ -39,8 +39,7 @@ namespace day03
             foreach (var vector in vectors)
             {
                 int trees = 0;
-                x = 0;
-                y = 0;
+                x = y = 0;
 
                 while (true)
                 {
@@ -50,8 +49,7 @@ namespace day03
                     if (y >= mapSource.Length)
                         break;
 
-                    if (x >= map[y].Length)
-                        Extend(mapSource, map);
+                    x = x % map[y].Length;
 
                     var isTree = map[y][x].ToString() == "#";
 
@@ -68,12 +66,6 @@ namespace day03
                 treeProduct *= treeFactors[treeFactorIndex];
 
             return treeProduct.ToString();
-        }
-
-        public static void Extend(string[] mapSource, string[] map)
-        {
-            for (int mapSourceIndex = 0; mapSourceIndex < mapSource.Length; mapSourceIndex++)
-                map[mapSourceIndex] += mapSource[mapSourceIndex];
         }
     }
 }
