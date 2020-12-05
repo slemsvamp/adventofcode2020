@@ -6,9 +6,15 @@ namespace day05
 {
     public class FirstStar
     {
-        public static string Run(object parameter)
+        public static string Run(Dictionary<int, Seat> seatings)
         {
-            return string.Empty;
+            int highestSeatingId = -1;
+
+            foreach (var seat in seatings.Values)
+                if (seat.Id > highestSeatingId)
+                    highestSeatingId = seat.Id;
+
+            return highestSeatingId.ToString();
         }
     }
 }
