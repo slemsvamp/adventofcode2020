@@ -2,34 +2,50 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace day07
 {
     public class InputParser
     {
-        internal static List<int> Parse(string filename)
+        internal static List<LuggageDescription> Parse(string filename)
         {
-            string[] lines = File.ReadAllLines(filename);
-            List<int> numbers = new List<int>();
+            var result = new List<LuggageDescription>();
 
-            foreach (var line in lines)
+            var containRegex = new Regex(@"^(?<container>.*) bags contain (?<containees>.*)\.$");
+            var containeesRegex = new Regex(@"(?<number>\d*) (?<description>.+) bag");
+
+            foreach (var line in File.ReadAllLines(filename))
             {
-                numbers.Add(int.Parse(line));
+                var containResult = containRegex.Match(line);
+
+                var luggage = new LuggageDescription(1, containResult.Groups["container"].Value);
+
+                var containees = containResult.Groups["containees"].Value;
+
+                if (containees == "no other bags")
+                {
+                    result.Add(luggage);
+                    continue;
+                }
+
+                var parts = containees.Split(", ");
+                foreach (var part in parts)
+                {
+                    var containeeResult = containeesRegex.Match(part);
+                    
+                    var containeeNumber = int.Parse(containeeResult.Groups["number"].Value);
+                    var containeeDescription = containeeResult.Groups["description"].Value;
+
+                    var containee = new LuggageDescription(containeeNumber, containeeDescription);
+
+                    luggage.Contains.Add(containee);
+                }
+
+                result.Add(luggage);
             }
 
-            return numbers;
-        }
-
-        public static List<int> ParseCSV(string filename)
-        {
-            var lines = File.ReadAllLines(filename);
-
-            var numbers = new List<int>();
-            var numberStrings = lines[0].Split(new[] { "," }, StringSplitOptions.None);
-
-            Array.ForEach(numberStrings, n => numbers.Add(int.Parse(n)));
-
-            return numbers;
+            return result;
         }
     }
 }
