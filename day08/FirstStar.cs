@@ -6,9 +6,12 @@ namespace day08
 {
     public class FirstStar
     {
-        public static string Run(object parameter)
+        public static string Run(List<Operation> operations)
         {
-            return string.Empty;
+            var @operator = new Operator(operations);
+            var result = @operator.Run();
+
+            return result.Accumulator.ToString();
         }
     }
 }
