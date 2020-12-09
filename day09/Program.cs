@@ -13,7 +13,7 @@ namespace day09
             Console.WriteLine($"Result: {part1}");
 
             Console.WriteLine("---- Part 02 ----");
-            var part2 = SecondStar.Run(input);
+            var part2 = SecondStar.Run(input, part1);
             Console.WriteLine($"Result: {part2}");
 
             Console.WriteLine("-----------------");

@@ -7,14 +7,14 @@ namespace day09
 {
     public class InputParser
     {
-        internal static List<int> Parse(string filename)
+        internal static List<long> Parse(string filename)
         {
             string[] lines = File.ReadAllLines(filename);
-            List<int> numbers = new List<int>();
+            List<long> numbers = new List<long>();
 
             foreach (var line in lines)
             {
-                numbers.Add(int.Parse(line));
+                numbers.Add(long.Parse(line));
             }
 
             return numbers;
