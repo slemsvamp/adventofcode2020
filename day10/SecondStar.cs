@@ -7,32 +7,40 @@ namespace day10
 {
     public class SecondStar
     {
+        private static Dictionary<int, long> _memo;
+        private static int[] _adapters;
+
         public static string Run(List<int> jolts)
         {
             int index = 1;
-            var adapters = new int[jolts.Count + 2];
-            var memo = new long[adapters.Length];
 
-            adapters[0] = 0;
+            _adapters = new int[jolts.Count + 2];
+            _memo = new Dictionary<int, long>();
+
+            _adapters[0] = 0;
             foreach (var jolt in jolts.OrderBy(j => j))
-                adapters[index++] = jolt;
+                _adapters[index++] = jolt;
 
-            adapters[jolts.Count + 1] = jolts.Max() + 3;
-            memo[adapters.Length - 1] = 1;
+            _adapters[jolts.Count + 1] = jolts.Max() + 3;
 
-            for (int playhead = adapters.Length - 2; playhead >= 0; playhead--)
-            {
-                long paths = 0;
+            var permutations = RecursiveCrawl(0);
 
-                for (int width = playhead + 1; width < adapters.Length; width++)
-                    if (adapters[width] - adapters[playhead] <= 3)
-                        paths += memo[width];
-                    else break;
+            return permutations.ToString();
+        }
 
-                memo[playhead] = paths;
-            }
+        public static long RecursiveCrawl(int index)
+        {
+            if (index == _adapters.Length - 1)
+                return 1;
+            if (_memo.ContainsKey(index))
+                return _memo[index];
+            long ans = 0;
+            for (int subIndex = index + 1; subIndex < _adapters.Length; subIndex++)
+                if (_adapters[subIndex] - _adapters[index] <= 3)
+                    ans += RecursiveCrawl(subIndex);
 
-            return memo[0].ToString();
+            _memo[index] = ans;
+            return ans;
         }
     }
 }
