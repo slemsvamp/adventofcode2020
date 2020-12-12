@@ -27,26 +27,14 @@ namespace day12
                         waypointEast += instruction.value; break;
                     case Movement.Left:
                     {
-                        var turns = instruction.value / 90;
-
-                        for (int turn = 0; turn < turns; turn++)
-                        {
-                            var savedEast = waypointEast;
-                            waypointEast = -waypointNorth;
-                            waypointNorth = savedEast;
-                        }
+                        for (int turn = 0; turn < instruction.value / 90; turn++)
+                            (waypointEast, waypointNorth) = (-waypointNorth, waypointEast);
                     }
                     break;
                     case Movement.Right:
                     {
-                        var turns = instruction.value / 90;
-
-                        for (int turn = 0; turn < turns; turn++)
-                        {
-                            var savedEast = waypointEast;
-                            waypointEast = waypointNorth;
-                            waypointNorth = -savedEast;
-                        }
+                        for (int turn = 0; turn < instruction.value / 90; turn++)
+                            (waypointEast, waypointNorth) = (waypointNorth, -waypointEast);
                     }
                     break;
                     case Movement.Forward:

@@ -27,7 +27,7 @@ namespace day12
                     case Movement.Left:
                     {
                         var turns = instruction.value / 90;
-                        facing = (Facing)(((int)facing + 4 - turns) % 4);
+                        facing = (Facing)(((int)facing + turns * 3) % 4);
                     }
                     break;
                     case Movement.Right:
