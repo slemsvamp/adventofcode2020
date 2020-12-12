@@ -10,8 +10,6 @@ namespace day12
         {
             int east = 0;
             int north = 0;
-            
-            var facing = Facing.East;
             int waypointEast = 10;
             int waypointNorth = 1;
 
@@ -33,29 +31,9 @@ namespace day12
 
                         for (int turn = 0; turn < turns; turn++)
                         {
-                            var newFacing = (Facing)(((int)facing + 4 - 1) % 4);
-
-                            switch (newFacing)
-                            {
-                                case Facing.East:
-                                case Facing.North:
-                                {
-                                    var save = waypointNorth;
-                                    waypointNorth = waypointEast;
-                                    waypointEast = -save;
-                                }
-                                break;
-                                case Facing.West:
-                                case Facing.South:
-                                {
-                                    var save = waypointEast;
-                                    waypointEast = -waypointNorth;
-                                    waypointNorth = save;
-                                }
-                                break;
-                            }
-
-                            facing = newFacing;
+                            var savedEast = waypointEast;
+                            waypointEast = -waypointNorth;
+                            waypointNorth = savedEast;
                         }
                     }
                     break;
@@ -65,29 +43,9 @@ namespace day12
 
                         for (int turn = 0; turn < turns; turn++)
                         {
-                            var newFacing = (Facing)(((int)facing + 1) % 4);
-
-                            switch (newFacing)
-                            {
-                                case Facing.East:
-                                case Facing.North:
-                                {
-                                    var save = waypointEast;
-                                    waypointEast = waypointNorth;
-                                    waypointNorth = -save;
-                                }
-                                break;
-                                case Facing.West:
-                                case Facing.South:
-                                {
-                                    var save = waypointNorth;
-                                    waypointNorth = -waypointEast;
-                                    waypointEast = save;
-                                }
-                                break;
-                            }
-
-                            facing = newFacing;
+                            var savedEast = waypointEast;
+                            waypointEast = waypointNorth;
+                            waypointNorth = -savedEast;
                         }
                     }
                     break;
