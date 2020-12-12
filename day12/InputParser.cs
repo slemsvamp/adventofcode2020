@@ -7,17 +7,40 @@ namespace day12
 {
     public class InputParser
     {
-        internal static List<int> Parse(string filename)
+        internal static List<(Movement movement, int value)> Parse(string filename)
         {
             string[] lines = File.ReadAllLines(filename);
-            List<int> numbers = new List<int>();
+            var instructions = new List<(Movement movement, int value)>();
 
             foreach (var line in lines)
             {
-                numbers.Add(int.Parse(line));
+                switch (line[0])
+                {
+                    case 'N':
+                        instructions.Add((Movement.North, int.Parse(line.Substring(1))));
+                        break;
+                    case 'S':
+                        instructions.Add((Movement.South, int.Parse(line.Substring(1))));
+                        break;
+                    case 'W':
+                        instructions.Add((Movement.West, int.Parse(line.Substring(1))));
+                        break;
+                    case 'E':
+                        instructions.Add((Movement.East, int.Parse(line.Substring(1))));
+                        break;
+                    case 'L':
+                        instructions.Add((Movement.Left, int.Parse(line.Substring(1))));
+                        break;
+                    case 'R':
+                        instructions.Add((Movement.Right, int.Parse(line.Substring(1))));
+                        break;
+                    case 'F':
+                        instructions.Add((Movement.Forward, int.Parse(line.Substring(1))));
+                        break;
+                }
             }
 
-            return numbers;
+            return instructions;
         }
 
         public static List<int> ParseCSV(string filename)
