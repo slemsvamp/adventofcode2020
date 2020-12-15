@@ -6,6 +6,8 @@ namespace day15
     {
         static void Main(string[] args)
         {
+            AgeGamePlayer.Run(new System.Collections.Generic.List<int> { 0, 3, 6 }, 2020);
+
             var input = InputParser.Parse("input.txt");
 
             Console.WriteLine("---- Part 01 ----");
