@@ -6,9 +6,7 @@ namespace day15
 {
     public class FirstStar
     {
-        public static string Run(object parameter)
-        {
-            return string.Empty;
-        }
+        public static string Run(List<int> numbers)
+            => AgeGamePlayer.Run(numbers, 2020);
     }
 }
