@@ -11,7 +11,6 @@ namespace day16
         {
             var invalidNumbers = new List<int>();
             foreach (var nearbyTicket in ticketInformation.NearbyTickets)
-            {
                 foreach (var value in nearbyTicket)
                 {
                     bool validForAtleastOneField = false;
@@ -29,7 +28,6 @@ namespace day16
                     if (!validForAtleastOneField)
                         invalidNumbers.Add(value);
                 }
-            }
 
             return invalidNumbers.Sum().ToString();
         }
