@@ -5,31 +5,50 @@ using System.Text;
 
 namespace day18
 {
+    public enum TokenType
+    {
+        Add, Multiply, Number,
+        StartParenthesis, EndParenthesis,
+    }
+
+    public struct Token
+    {
+        public TokenType Type;
+        public long Value;
+    }
+
     public class InputParser
     {
-        internal static List<int> Parse(string filename)
+        internal static List<List<Token>> Parse(string filename)
         {
             string[] lines = File.ReadAllLines(filename);
-            List<int> numbers = new List<int>();
+
+            var calculations = new List<List<Token>>();
 
             foreach (var line in lines)
             {
-                numbers.Add(int.Parse(line));
+                var calculation = new List<Token>();
+
+                foreach (var character in line)
+                {
+                    if (character == ' ')
+                        continue;
+                    else if (character == '+')
+                        calculation.Add(new Token { Type = TokenType.Add });
+                    else if (character == '*')
+                        calculation.Add(new Token { Type = TokenType.Multiply });
+                    else if (character == '(')
+                        calculation.Add(new Token { Type = TokenType.StartParenthesis });
+                    else if (character == ')')
+                        calculation.Add(new Token { Type = TokenType.EndParenthesis });
+                    else
+                        calculation.Add(new Token { Type = TokenType.Number, Value = int.Parse(character.ToString()) });
+                }
+
+                calculations.Add(calculation);
             }
 
-            return numbers;
-        }
-
-        public static List<int> ParseCSV(string filename)
-        {
-            var lines = File.ReadAllLines(filename);
-
-            var numbers = new List<int>();
-            var numberStrings = lines[0].Split(new[] { "," }, StringSplitOptions.None);
-
-            Array.ForEach(numberStrings, n => numbers.Add(int.Parse(n)));
-
-            return numbers;
+            return calculations;
         }
     }
 }

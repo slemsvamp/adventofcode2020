@@ -6,6 +6,8 @@ namespace day18
     {
         static void Main(string[] args)
         {
+            // too low 2444393818680
+
             var input = InputParser.Parse("input.txt");
 
             Console.WriteLine("---- Part 01 ----");
