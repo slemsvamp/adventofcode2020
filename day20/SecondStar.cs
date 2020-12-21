@@ -8,97 +8,25 @@ namespace day20
 {
     public class SecondStar
     {
-        #region Models
-        public class MapTile
-        {
-            public Tile Self;
-
-            public byte Rotation;
-            public byte HorizontalFlip;
-            public byte VerticalFlip;
-
-            public MapTile Up;
-            public MapTile Down;
-            public MapTile Left;
-            public MapTile Right;
-
-            public MapTile(Tile self, byte rotation, byte horizontal, byte vertical, MapTile up = null, MapTile down = null, MapTile left = null, MapTile right = null)
-            {
-                Self = self;
-                Up = up;
-                Down = down;
-                Left = left;
-                Right = right;
-            }
-
-            public int GenerateHashCode()
-                => HashCode.Combine(Self.Id, Rotation, HorizontalFlip, VerticalFlip);
-        }
-
-        public enum Direction
-        {
-            Up, Down, Left, Right
-        }
-
-        public struct Connection
-        {
-            public int SourceId;
-            public int TargetId;
-            public Direction Direction;
-            public string SourceType;
-            public string TargetType;
-
-            public Connection(int sourceId, int targetId, Direction direction, string sourceType, string targetType)
-            {
-                SourceId = sourceId;
-                TargetId = targetId;
-                Direction = direction;
-                SourceType = sourceType;
-                TargetType = targetType;
-            }
-        }
-
-        public struct Match
-        {
-            public bool Up;
-            public bool Down;
-            public bool Left;
-            public bool Right;
-        }
-
-        public struct MatchInfo
-        {
-            public int Source;
-            public int Target;
-            public byte Rotation;
-            public byte Horizontal;
-            public byte Vertical;
-            public Direction Direction;
-        }
-        #endregion
-
         private static Dictionary<int, char[,]> _memo;
-        private static List<MapTile> _maptiles;
-
         private static string[] _seaMonster;
         private static char[,] _board;
         private static int[,] _mapIds;
-        public static int _maxBoardWriteX = 0;
-        public static int _maxBoardWriteY = 0;
 
         public static string Run(List<Tile> input)
         {
             Console.WindowWidth = 80;
             Console.WindowHeight = 50;
 
+            _memo = new Dictionary<int, char[,]>();
             _board = new char[96, 96];
             _mapIds = new int[12, 12];
 
+            var connections = new Dictionary<int, List<Connection>>();
+            var memo = new Dictionary<int, List<MatchInfo>>();
+
             var tiles = new Dictionary<int, Tile>();
             tiles = input.ToDictionary(t => t.Id);
-
-            _memo = new Dictionary<int, char[,]>();
-            _maptiles = new List<MapTile>();
 
             _seaMonster = new string[]
             {
@@ -108,12 +36,6 @@ namespace day20
             };
 
             var cornersAndEdges = FindCornersAndEdges(input);
-
-#if RUBBISH
-            var connections = new Dictionary<int, List<Connection>>();
-#endif
-            var connections = new Dictionary<int, List<Connection>>();
-            var memo = new Dictionary<int, List<MatchInfo>>();
 
             var masterCorner = cornersAndEdges.MasterCornerId;
             var masterCornerMatch = cornersAndEdges.MasterCornerMatch;
@@ -155,7 +77,9 @@ namespace day20
                     if (links.Contains(hash))
                         continue;
 
-                    combinations.AddRange(CheckCombinations(tiles[nextTileId], tiles[scoutId]));
+                    combinations.AddRange(
+                            TileMatcher.CheckAllCombinations(tiles[nextTileId], tiles[scoutId], _memo)
+                        );
 
                     if (combinations.Count > 0)
                     {
@@ -164,42 +88,27 @@ namespace day20
                         if (combinations.Count > 1)
                             System.Diagnostics.Debug.WriteLine($"{nextTileId} -> {scoutId}, Combinations: {combinations.Count}");
 
-                        var map = Rotate(tiles[scoutId].Map, combinations[0].Rotation);
-                        map = Flip(map, combinations[0].Horizontal, combinations[0].Vertical);
+                        var key = HashCode.Combine(combinations[0].Target, combinations[0].Permutation);
+                        var direction = combinations[0].Direction;
+                        var map = _memo[key];
 
+                        switch (direction)
+                        {
+                            case Direction.Up: (y, mapIdY) = (y - 8, mapIdY - 1); break;
+                            case Direction.Down: (y, mapIdY) = (y + 8, mapIdY + 1); break;
+                            case Direction.Left: (x, mapIdX) = (x - 8, mapIdX - 1); break;
+                            case Direction.Right: (x, mapIdX) = (x + 8, mapIdX + 1); break;
+                        }
+
+                        _mapIds[mapIdY, mapIdX] = scoutId;
                         tiles[scoutId] = new Tile
                         {
                             Id = scoutId,
                             Map = map
                         };
-
-                        if (combinations[0].Direction == Direction.Up)
-                        {
-                            y -= 8;
-                            mapIdY--;
-                        }
-                        if (combinations[0].Direction == Direction.Down)
-                        {
-                            y += 8;
-                            mapIdY++;
-                        }
-                        if (combinations[0].Direction == Direction.Left)
-                        {
-                            x -= 8;
-                            mapIdX--;
-                        }
-                        if (combinations[0].Direction == Direction.Right)
-                        {
-                            x += 8;
-                            mapIdX++;
-                        }
-
                         DrawMapToBoard(map, x, y);
 
-                        _mapIds[mapIdY, mapIdX] = scoutId;
-
                         nextTileId = scoutId;
-
                         return true;
                     }
                 }
@@ -246,28 +155,24 @@ namespace day20
 
                     foreach (var tile in restOfTiles)
                     {
-                        var combinations = CheckCombinations(tiles[aboveTileId], tile.Value);
+                        var combinations = TileMatcher.CheckAllCombinations(tiles[aboveTileId], tile.Value, _memo);
 
                         if (combinations.Count > 0)
                         {
                             var match = combinations.First(c => c.Direction == Direction.Down);
+                            var key = HashCode.Combine(combinations[0].Target, combinations[0].Permutation);
+                            var direction = combinations[0].Direction;
+                            var map = _memo[key];
 
-                            var map = tile.Value.Map;
-                            if (match.Rotation > 0)
-                                map = Rotate(map, match.Rotation);
-                            if (match.Horizontal > 0 || match.Vertical > 0)
-                                map = Flip(map, match.Horizontal, match.Vertical);
-
-                            tileKeysToRemove.Add(tile.Key);
                             _mapIds[middleY, middleX] = tile.Key;
-
                             tiles[tile.Key] = new Tile
                             {
                                 Id = tile.Key,
                                 Map = map
                             };
-
                             DrawMapToBoard(map, x, y);
+
+                            tileKeysToRemove.Add(tile.Key);
                         }
                     }
 
@@ -275,247 +180,92 @@ namespace day20
                         restOfTiles.Remove(tileKeyToRemove);
 
                     tileKeysToRemove.Clear();
-                            
+
                     x += 8;
                 }
 
                 y += 8;
             }
 
-            // TO REFACTOR:
-            // I tried my way forward, found sea monsters by flipping once and it was correct.
-            // This should ofcourse search through the different options and test for more cases
-            // like most things do in this problem, but I've worked on this for far too long,
-            // so it will be a job for future me.
+            var boards = new Dictionary<int, char[,]>();
 
-            // 2020-12-21, me
-
-            _board = Flip(_board, 0, 1);
-
-            bool looking = true;
-            int lookingX = 0;
-            int lookingY = 0;
-
-            while (looking)
+            boards.Add(0, _board.Copy());
+            boards.Add(1, _board.Flip());
+            for (int permutation = 2; permutation < 8; permutation++)
             {
-                Console.Clear();
+                if (permutation % 2 == 0)
+                    boards.Add(permutation, boards[permutation - 2].Rotate());
+                else
+                    boards.Add(permutation, boards[permutation - 1].Flip());
+            }
 
-                var maxBoardY = Math.Min(lookingY + 49, _board.GetLength(0));
-                var maxBoardX = Math.Min(lookingX + 80, _board.GetLength(1));
+            foreach (var board in boards)
+                if (FindSeamonsters(board.Value) > 0)
+                {
+                    bool looking = true;
+                    int lookingX = 0;
+                    int lookingY = 0;
 
-                for (int boardY = lookingY; boardY < maxBoardY; boardY++)
-                    for (int boardX = lookingX; boardX < maxBoardX; boardX++)
+                    while (looking)
                     {
-                        var screenX = 1 + boardX - lookingX;
-                        var screenY = 1 + boardY - lookingY;
+                        Console.Clear();
 
-                        if (screenX > 0 && screenY > 0 && screenX < Console.WindowWidth - 1 && screenY < Console.WindowHeight - 1)
+                        var maxBoardY = Math.Min(lookingY + 49, _board.GetLength(0));
+                        var maxBoardX = Math.Min(lookingX + 80, _board.GetLength(1));
+
+                        for (int boardY = lookingY; boardY < maxBoardY; boardY++)
+                            for (int boardX = lookingX; boardX < maxBoardX; boardX++)
+                            {
+                                var screenX = 1 + boardX - lookingX;
+                                var screenY = 1 + boardY - lookingY;
+
+                                if (screenX > 0 && screenY > 0 && screenX < Console.WindowWidth - 1 && screenY < Console.WindowHeight - 1)
+                                {
+                                    Console.SetCursorPosition(screenX, screenY);
+                                    Console.Write(board.Value[boardY, boardX]);
+                                }
+                            }
+
+                        var key = Console.ReadKey(true);
+
+                        switch (key.Key)
                         {
-                            Console.SetCursorPosition(screenX, screenY);
-                            Console.Write(_board[boardY, boardX]);
+                            case ConsoleKey.UpArrow: lookingY -= 8; break;
+                            case ConsoleKey.DownArrow: lookingY += 8; break;
+                            case ConsoleKey.LeftArrow: lookingX -= 8; break;
+                            case ConsoleKey.RightArrow: lookingX += 8; break;
+                            case ConsoleKey.Q: looking = false; break;
                         }
+
+                        if (lookingY < 0) lookingY = 0;
+                        if (lookingY > maxBoardY - 7) lookingY = maxBoardY - 7;
+                        if (lookingX < 0) lookingX = 0;
+                        if (lookingX > maxBoardX - 7) lookingX = maxBoardX - 7;
                     }
 
-                var key = Console.ReadKey(true);
 
-                switch (key.Key)
-                {
-                    case ConsoleKey.UpArrow: lookingY -= 7; break;
-                    case ConsoleKey.DownArrow: lookingY += 7; break;
-                    case ConsoleKey.LeftArrow: lookingX -= 7; break;
-                    case ConsoleKey.RightArrow: lookingX += 7; break;
-                    case ConsoleKey.F: FindSeaMonster(); break;
-                    case ConsoleKey.C: Console.WriteLine(); return CountRoughSea();
-                    case ConsoleKey.Q: looking = false; break;
+                    return CountRoughSea(board.Value);
                 }
 
-                if (lookingY < 0) lookingY = 0;
-                if (lookingY > maxBoardY - 7) lookingY = maxBoardY - 7;
-                if (lookingX < 0) lookingX = 0;
-                if (lookingX > maxBoardX - 7) lookingX = maxBoardX - 7;
-            }
-
-            //foreach (var edge in cornersAndEdges.Edges)
-            //{
-            //    var combinations = CheckCombinations(tiles[masterCorner], tiles[edge]);
-
-            //    if (combinations.Count > 0)
-            //    {
-            //        var map = Rotate(tiles[edge].Map, combinations[0].Rotation);
-            //        tiles[edge] = new Tile
-            //        {
-            //            Id = combinations[0].Target,
-            //            Map = map
-            //        };
-            //        connections.Add(masterCorner, new List<Connection>());
-            //        connections[masterCorner].Add(new Connection(masterCorner, edge, combinations[0].Direction, "Corner", "Edge"));
-            //        break;
-            //    }
-
-            //}
-
-#if RUBBISH
-            #region This is a load of rubbish for now
-            // find a corner that has exactly two matches
-            foreach (var cornerId in cornersAndEdges.Corners)
-            {
-                var corner = tiles[cornerId];
-                var connects = new Dictionary<int, List<MatchInfo>>();
-                var hash = new HashSet<int>();
-
-                foreach (var edgeId in cornersAndEdges.Edges)
-                {
-                    var edge = tiles[edgeId];
-
-                    var matchinfo = new List<MatchInfo>();
-
-                    var key = HashCode.Combine(corner.Id, edge.Id);
-                    if (memo.ContainsKey(key))
-                        matchinfo = memo[key];
-                    else
-                    {
-                        matchinfo = CheckCombinations(corner, edge);
-                        memo.Add(key, matchinfo);
-                    }
-
-                    foreach (var info in matchinfo)
-                    {
-                        if (!connects.ContainsKey(info.Source))
-                            connects.Add(info.Source, new List<MatchInfo>());
-                        connects[info.Source].Add(info);
-                    }
-                }
-
-                foreach (var connect in connects)
-                {
-                    if (!connections.ContainsKey(connect.Key))
-                        connections.Add(connect.Key, new List<Connection>());
-                    foreach (var match in connect.Value)
-                    {
-                        var newConnection = new Connection(match.Source, match.Target, match.Direction, "Corner", "Edge");
-                        if (!connections[connect.Key].Contains(newConnection))
-                            connections[connect.Key].Add(newConnection);
-                        hash.Add(match.Source);
-                        hash.Add(match.Target);
-                    }
-                }
-            }
-
-            // trace edge
-            foreach (var cornerId in cornersAndEdges.Corners)
-                ConnectingEdges(cornerId, tiles, connections, cornersAndEdges.Edges, memo);
-
-            // run through edges to connect them up
-            foreach (var connection in connections.Where(c => c.Value.Count == 1))
-            {
-                int not = connection.Value[0].SourceId;
-                foreach (var edge in cornersAndEdges.Edges)
-                {
-                    if (connection.Key == edge || edge == not)
-                        continue;
-
-                    var endchainCombination = CheckCombinations(tiles[connection.Key], tiles[edge]);
-
-                    if (endchainCombination.Count > 0)
-                    {
-                        var eC = endchainCombination[0];
-                        connections[connection.Key].Add(new Connection(eC.Source, eC.Target, eC.Direction, "Edge", "Edge"));
-                    }
-                }
-            }
-
-            bool quit = false;
-            int top = 0;
-            int left = 0;
-
-
-
-            Console.Clear();
-
-            while (!quit)
-            {
-                var cornerTile = tiles[cornersAndEdges.Corners[0]];
-                Draw(new Point(40, 20), cornerTile.Map, 0, 0, 0);
-                var firstEdge1 = tiles[connections[cornerTile.Id][1].TargetId];
-                var key = HashCode.Combine(cornerTile.Id, firstEdge1.Id);
-                var matchInfo = memo[key].Where(m => m.Target == firstEdge1.Id).First();
-                Draw(new Point(51, 20), firstEdge1.Map, matchInfo.Rotation, matchInfo.Horizontal, matchInfo.Vertical);
-
-                var firstEdge2 = tiles[connections[firstEdge1.Id][1].TargetId];
-                key = HashCode.Combine(firstEdge1.Id, firstEdge2.Id);
-                matchInfo = memo[key].Where(m => m.Target == firstEdge2.Id).First();
-                Draw(new Point(62, 20), firstEdge2.Map, matchInfo.Rotation, matchInfo.Horizontal, 0);
-
-                var secondEdge1 = tiles[connections[cornerTile.Id][0].TargetId];
-                key = HashCode.Combine(cornerTile.Id, secondEdge1.Id);
-                matchInfo = memo[key].Where(m => m.Target == secondEdge1.Id).First();
-                Draw(new Point(40, 9), secondEdge1.Map, matchInfo.Rotation, matchInfo.Horizontal, matchInfo.Vertical);
-
-                var answer = Console.ReadKey(true);
-
-                if (answer.Key == ConsoleKey.Q)
-                    quit = true;
-                if (answer.Key == ConsoleKey.DownArrow)
-                    top++;
-                if (answer.Key == ConsoleKey.UpArrow)
-                    top--;
-                if (answer.Key == ConsoleKey.LeftArrow)
-                    left--;
-                if (answer.Key == ConsoleKey.RightArrow)
-                    left++;
-            }
-
-            // look through all other edges until it connects to one of our corner-edges
-            #endregion
-#endif
-
-            return "";
+            return "Failed to find any seamonsters!";
         }
 
-        public static string CountRoughSea()
+        private static int FindSeamonsters(char[,] board)
         {
-            int roughSea = 0;
-            for (int y = 0; y < _board.GetLength(0); y++)
-                for (int x = 0; x < _board.GetLength(1); x++)
-                {
-                    if (_board[y, x] == '#')
-                        roughSea++;
-                }
-            return roughSea.ToString();
-        }
-
-        public static void DrawMapToBoard(char[,] map, int x, int y)
-        {
-            for (int yIndex = y; yIndex < y + 8; yIndex++)
-                for (int xIndex = x; xIndex < x + 8; xIndex++)
-                {
-                    _board[yIndex, xIndex] = map[yIndex - y + 1, xIndex - x + 1];
-                    if (yIndex > _maxBoardWriteY)
-                        _maxBoardWriteY = yIndex;
-                    if (xIndex > _maxBoardWriteX)
-                        _maxBoardWriteX = xIndex;
-                }
-        }
-
-        public static void FindSeaMonster()
-        {
-            // find and mark, so we count # later
-
-            var checkForSearMonster = new Func<int, int, bool>((int bX, int bY) =>
+            var checkForSeamonster = new Func<int, int, char[,], bool>((int bX, int bY, char[,] board) =>
             {
                 for (int y = 0; y < _seaMonster.Length; y++)
                     for (int x = 0; x < _seaMonster[0].Length; x++)
                     {
-                        if (_seaMonster[y][x] == '#' && _board[bY + y, bX + x] != _seaMonster[y][x])
+                        if (_seaMonster[y][x] == '#' && board[bY + y, bX + x] != _seaMonster[y][x])
                             return false;
                     }
 
-                // rewrite board here if we want to
                 for (int y = 0; y < _seaMonster.Length; y++)
                     for (int x = 0; x < _seaMonster[0].Length; x++)
                     {
                         if (_seaMonster[y][x] == '#')
-                            _board[bY + y, bX + x] = 'O';
+                            board[bY + y, bX + x] = 'O';
                     }
 
                 return true;
@@ -523,42 +273,44 @@ namespace day20
 
             var monstersFound = 0;
 
-            for (int y = 0; y < _board.GetLength(0); y++)
-                for (int x = 0; x < _board.GetLength(1); x++)
+            for (int y = 0; y < board.GetLength(0); y++)
+                for (int x = 0; x < board.GetLength(1); x++)
                 {
-                    if (x + _seaMonster[0].Length >= _board.GetLength(1)
-                        || y + _seaMonster.Length >= _board.GetLength(0)
-                        || !checkForSearMonster(x, y))
+                    if (x + _seaMonster[0].Length >= board.GetLength(1)
+                        || y + _seaMonster.Length >= board.GetLength(0)
+                        || !checkForSeamonster(x, y, board))
                         continue;
                     else
                         monstersFound++;
                 }
 
-            Console.WriteLine();
-            Console.WriteLine($"Found {monstersFound} monster(s)!");
+            return monstersFound;
         }
 
-        public static void Draw(Point at, char[,] map, byte rotations, byte horizontal, byte vertical)
+        private static string CountRoughSea(char[,] board)
         {
-            if (rotations > 0)
-                map = Rotate(map, rotations);
-            if (horizontal > 0 || vertical > 0)
-                map = Flip(map, horizontal, vertical);
-
-            for (var y = 0; y < map.GetLength(0); y++)
-                for (var x = 0; x < map.GetLength(1); x++)
+            int roughSea = 0;
+            int seamonsterPart = 0;
+            for (int y = 0; y < board.GetLength(0); y++)
+                for (int x = 0; x < board.GetLength(1); x++)
                 {
-                    Console.SetCursorPosition(at.X + x, at.Y + y);
-                    Console.Write(map[y, x]);
+                    if (board[y, x] == '#')
+                        roughSea++;
+                    else if (board[y, x] == 'O')
+                        seamonsterPart++;
                 }
+            return roughSea.ToString();
         }
 
-        public static void ConnectingEdges(
-            int cornerId,
-            Dictionary<int, Tile> tiles,
-            Dictionary<int, List<Connection>> connections,
-            List<int> edges,
-            Dictionary<int, List<MatchInfo>> memo)
+        private static void DrawMapToBoard(char[,] map, int x, int y)
+        {
+            for (int yIndex = y; yIndex < y + 8; yIndex++)
+                for (int xIndex = x; xIndex < x + 8; xIndex++)
+                    _board[yIndex, xIndex] = map[yIndex - y + 1, xIndex - x + 1];
+        }
+
+        private static void ConnectingEdges(int cornerId, Dictionary<int, Tile> tiles,
+            Dictionary<int, List<Connection>> connections, List<int> edges, Dictionary<int, List<MatchInfo>> memo)
         {
             foreach (var connection in connections[cornerId])
             {
@@ -585,7 +337,7 @@ namespace day20
                             combinations = memo[key];
                         else
                         {
-                            combinations = CheckCombinations(edgeTile, tiles[edge]);
+                            combinations = TileMatcher.CheckAllCombinations(edgeTile, tiles[edge], _memo);
                             memo.Add(key, combinations);
                         }
 
@@ -600,7 +352,6 @@ namespace day20
                         if (distinct.Count() == 1)
                         {
                             var connectingId = distinct.First();
-                            //Console.WriteLine($"Edge pieces connect: {edgeTile.Id} <-> {connectingId}");
 
                             if (!connections.ContainsKey(edgeTile.Id))
                                 connections.Add(edgeTile.Id, new List<Connection>());
@@ -616,316 +367,48 @@ namespace day20
             }
         }
 
-        public static (List<int> Corners, List<int> Edges, int MasterCornerId, Match MasterCornerMatch) FindCornersAndEdges(List<Tile> tiles)
+        private static CornersAndEdges FindCornersAndEdges(List<Tile> tiles)
         {
             var matchedTiles = new Dictionary<int, Match>();
 
-            for (int i = 0; i < tiles.Count; i++)
-            {
-                for (int j = 0; j < tiles.Count; j++)
+            for (int sourceIndex = 0; sourceIndex < tiles.Count; sourceIndex++)
+                for (int targetIndex = 0; targetIndex < tiles.Count; targetIndex++)
                 {
-                    if (i == j) continue;
-                    var idSource = tiles[i].Id;
-                    var idTarget = tiles[j].Id;
+                    if (sourceIndex == targetIndex) continue;
 
-                    var allMatches = CheckAllMatches(tiles[i], tiles[j]);
-                    if (!matchedTiles.ContainsKey(idSource))
-                        matchedTiles.Add(idSource, new Match());
+                    var sourceTile = tiles[sourceIndex];
+                    var targetTile = tiles[targetIndex];
 
+                    var sourceId = sourceTile.Id;
+                    var targetId = targetTile.Id;
 
-                    var newMatch = new Match();
-                    newMatch.Up = allMatches.Up | matchedTiles[idSource].Up;
-                    newMatch.Down = allMatches.Down | matchedTiles[idSource].Down;
-                    newMatch.Left = allMatches.Left | matchedTiles[idSource].Left;
-                    newMatch.Right = allMatches.Right | matchedTiles[idSource].Right;
-
-                    matchedTiles[idSource] = newMatch;
+                    var match = TileMatcher.CheckAllCombinations(sourceTile, targetTile, _memo);
+                    if (!matchedTiles.ContainsKey(sourceId))
+                        matchedTiles.Add(sourceId, Match.Default(false));
+                    matchedTiles[sourceId] = Match.Combine(matchedTiles[sourceId], match);
                 }
-            }
 
-            var corners = matchedTiles
-                .Where(m => ((m.Value.Up ? 1 : 0) + (m.Value.Down ? 1 : 0) + (m.Value.Left ? 1 : 0) + (m.Value.Right ? 1 : 0)) == 2)
-                .Select(k => k.Key)
-                .ToList();
+            var cornerPredicate = new Func<KeyValuePair<int, Match>, bool>(
+                m => ((m.Value.Up ? 1 : 0) + (m.Value.Down ? 1 : 0) + (m.Value.Left ? 1 : 0) + (m.Value.Right ? 1 : 0)) == 2);
 
-            var edges = matchedTiles
-                .Where(m => ((m.Value.Up ? 1 : 0) + (m.Value.Down ? 1 : 0) + (m.Value.Left ? 1 : 0) + (m.Value.Right ? 1 : 0)) == 3)
-                .Select(k => k.Key)
-                .ToList();
+            var edgePredicate = new Func<KeyValuePair<int, Match>, bool>(
+                m => ((m.Value.Up ? 1 : 0) + (m.Value.Down ? 1 : 0) + (m.Value.Left ? 1 : 0) + (m.Value.Right ? 1 : 0)) == 3);
+
+            var corners = matchedTiles.Where(cornerPredicate).Select(k => k.Key).ToList();
+            var edges = matchedTiles.Where(edgePredicate).Select(k => k.Key).ToList();
 
             int masterCorner = matchedTiles.Where(m => m.Value.Right && m.Value.Down && !m.Value.Left && !m.Value.Up).Select(m => m.Key).FirstOrDefault();
             if (masterCorner == 0) masterCorner = corners.First();
 
             var masterCornerMatch = matchedTiles[masterCorner];
 
-            return (corners, edges, masterCorner, masterCornerMatch);
-        }
-
-        public static void Test()
-        {
-            char[,] map = new char[10, 10];
-
-            var mapStrings = new List<string>()
+            return new CornersAndEdges
             {
-                "xxxxxxxxxy",
-                "wxxxxxxxyy",
-                "wwxxxxxyyy",
-                "wwwxxxyyyy",
-                "wwwwxyyyyy",
-                "wwwwwzyyyy",
-                "wwwwzzzyyy",
-                "wwwzzzzzyy",
-                "wwzzzzzzzy",
-                "wzzzzzzzzz"
+                Corners = corners,
+                Edges = edges,
+                MasterCornerId = masterCorner,
+                MasterCornerMatch = masterCornerMatch
             };
-
-            Draw(new Point(1, 1), Clone(map), 0, 0, 0);
-            Console.ForegroundColor = ConsoleColor.Gray;
-
-            Draw(new Point(12, 1), Clone(map), 1, 0, 0);
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-
-            Draw(new Point(24, 1), Clone(map), 2, 0, 0);
-            Console.ForegroundColor = ConsoleColor.White;
-
-            Draw(new Point(36, 1), Clone(map), 3, 0, 0);
-
-            Console.WriteLine();
-        }
-
-        private static Match CheckAllMatches(Tile source, Tile target)
-        {
-            var result = new Match();
-
-            for (byte rotationIndex = 0; rotationIndex < 4; rotationIndex++)
-                for (byte horizontalIndex = 0; horizontalIndex < 2; horizontalIndex++)
-                    for (byte verticalIndex = 0; verticalIndex < 2; verticalIndex++)
-                    {
-                        if (horizontalIndex == 1 && verticalIndex == 1)
-                            continue;
-
-                        var hash = HashCode.Combine(target.Id, rotationIndex, horizontalIndex, verticalIndex);
-                        var map = new char[0, 0];
-
-                        if (_memo.ContainsKey(hash))
-                            map = Clone(_memo[hash]);
-                        else
-                        {
-                            map = Clone(target.Map);
-
-                            if (rotationIndex > 0)
-                                map = Rotate(map, rotationIndex);
-                            if (horizontalIndex > 0 || verticalIndex > 0)
-                                map = Flip(map, horizontalIndex, verticalIndex);
-
-                            _memo.Add(hash, map);
-                        }
-
-                        if (MatchUp(source.Map, map))
-                            result.Up = true;
-                        if (MatchDown(source.Map, map))
-                            result.Down = true;
-                        if (MatchLeft(source.Map, map))
-                            result.Left = true;
-                        if (MatchRight(source.Map, map))
-                            result.Right = true;
-                    }
-
-            return result;
-        }
-
-        public static List<MatchInfo> CheckCombinations(Tile source, Tile target)
-        {
-            var result = new List<MatchInfo>();
-
-            for (byte rotationIndex = 0; rotationIndex < 4; rotationIndex++)
-                for (byte horizontalIndex = 0; horizontalIndex < 2; horizontalIndex++)
-                    for (byte verticalIndex = 0; verticalIndex < 2; verticalIndex++)
-                    {
-                        if (horizontalIndex == 1 && verticalIndex == 1)
-                            continue;
-
-                        var hash = HashCode.Combine(target.Id, rotationIndex, horizontalIndex, verticalIndex);
-                        var map = new char[0, 0];
-
-                        if (_memo.ContainsKey(hash))
-                            map = Clone(_memo[hash]);
-                        else
-                        {
-                            map = Clone(target.Map);
-
-                            if (rotationIndex > 0)
-                                map = Rotate(map, rotationIndex);
-                            if (horizontalIndex > 0 || verticalIndex > 0)
-                                map = Flip(map, horizontalIndex, verticalIndex);
-
-                            _memo.Add(hash, map);
-                        }
-
-                        if (MatchUp(source.Map, map))
-                        {
-                            result.Add(new MatchInfo
-                            {
-                                Source = source.Id,
-                                Target = target.Id,
-                                Rotation = rotationIndex,
-                                Horizontal = horizontalIndex,
-                                Vertical = verticalIndex,
-                                Direction = Direction.Up
-                            });
-                        }
-
-                        if (MatchDown(source.Map, map))
-                        {
-                            result.Add(new MatchInfo
-                            {
-                                Source = source.Id,
-                                Target = target.Id,
-                                Rotation = rotationIndex,
-                                Horizontal = horizontalIndex,
-                                Vertical = verticalIndex,
-                                Direction = Direction.Down
-                            });
-                        }
-
-                        if (MatchLeft(source.Map, map))
-                        {
-                            result.Add(new MatchInfo
-                            {
-                                Source = source.Id,
-                                Target = target.Id,
-                                Rotation = rotationIndex,
-                                Horizontal = horizontalIndex,
-                                Vertical = verticalIndex,
-                                Direction = Direction.Left
-                            });
-                        }
-
-                        if (MatchRight(source.Map, map))
-                        {
-                            result.Add(new MatchInfo
-                            {
-                                Source = source.Id,
-                                Target = target.Id,
-                                Rotation = rotationIndex,
-                                Horizontal = horizontalIndex,
-                                Vertical = verticalIndex,
-                                Direction = Direction.Right
-                            });
-                        }
-                    }
-
-            return result;
-        }
-
-        public static bool MatchUp(char[,] source, char[,] target)
-        {
-            var bottomY = target.GetLength(0) - 1;
-            for (int x = 0; x < target.GetLength(1); x++)
-                if (source[0, x] != target[bottomY, x])
-                    return false;
-            return true;
-        }
-
-        public static bool MatchDown(char[,] source, char[,] target)
-        {
-            var bottomY = source.GetLength(0) - 1;
-            for (int x = 0; x < target.GetLength(1); x++)
-                if (source[bottomY, x] != target[0, x])
-                    return false;
-            return true;
-        }
-
-        public static bool MatchRight(char[,] source, char[,] target)
-        {
-            var rightX = source.GetLength(1) - 1;
-            for (int y = 0; y < target.GetLength(0); y++)
-                if (source[y, rightX] != target[y, 0])
-                    return false;
-            return true;
-        }
-
-        public static bool MatchLeft(char[,] source, char[,] target)
-        {
-            var rightX = target.GetLength(1) - 1;
-            for (int y = 0; y < target.GetLength(0); y++)
-                if (source[y, 0] != target[y, rightX])
-                    return false;
-            return true;
-        }
-
-        public static char[,] Rotate(char[,] map, int rotations)
-        {
-            var mapY = map.GetLength(0);
-            var mapX = map.GetLength(1);
-            var mapNext = new char[mapY, mapX];
-
-            mapNext = Clone(map);
-
-            int layers = mapX / 2;
-
-            if (mapY / 2 != layers)
-                throw new Exception("Rotate only works if the X and Y dimensions are the same.");
-
-            for (var rotation = 0; rotation < rotations; rotation++)
-            {
-                for (var layerIndex = 0; layerIndex < layers; layerIndex++)
-                {
-                    int iterations = mapX - layerIndex * 2;
-
-                    for (int iteration = 0; iteration < iterations; iteration++)
-                        (mapNext[layerIndex + 0, layerIndex + 0 + iteration], mapNext[layerIndex + 0 + iteration, mapX - layerIndex - 1], mapNext[mapY - layerIndex - 1, mapX - layerIndex - iteration - 1], mapNext[mapY - layerIndex - iteration - 1, layerIndex + 0])
-                            = (map[mapY - layerIndex - iteration - 1, layerIndex + 0], map[layerIndex + 0, layerIndex + 0 + iteration], map[layerIndex + 0 + iteration, mapX - layerIndex - 1], map[mapY - layerIndex - 1, mapX - layerIndex - iteration - 1]);
-                }
-
-                map = Clone(mapNext);
-            }
-
-            return mapNext;
-        }
-
-        public static char[,] Clone(char[,] source)
-        {
-            var mapY = source.GetLength(0);
-            var mapX = source.GetLength(1);
-            var target = new char[mapY, mapX];
-            for (int y = 0; y < mapY; y++)
-                for (int x = 0; x < mapX; x++)
-                    target[y, x] = source[y, x];
-            return target;
-        }
-
-        public static char[,] Flip(char[,] map, byte horizontal, byte vertical)
-        {
-            var mapY = map.GetLength(0);
-            var mapX = map.GetLength(1);
-            var mapNext = new char[mapY, mapX];
-
-            mapNext = Clone(map);
-
-            if (horizontal > 0)
-            {
-                for (int y = 0; y < mapY; y++)
-                {
-                    (mapNext[y, 0], mapNext[y, mapX - 1]) = (map[y, mapX - 1], map[y, 0]);
-
-                    for (int x = 1; x < mapX / 2; x++)
-                        (mapNext[y, x], mapNext[y, mapX - x - 1]) = (map[y, mapX - x - 1], map[y, x]);
-                }
-            }
-
-            if (vertical > 0)
-            {
-                for (int x = 0; x < mapX; x++)
-                {
-                    (mapNext[0, x], mapNext[mapY - 1, x]) = (mapNext[mapY - 1, x], mapNext[0, x]);
-
-                    for (int y = 1; y < mapY / 2; y++)
-                        (mapNext[y, x], mapNext[mapY - y - 1, x]) = (map[mapY - y - 1, x], map[y, x]);
-                }
-            }
-
-            return mapNext;
         }
     }
 }

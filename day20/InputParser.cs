@@ -6,12 +6,6 @@ using System.Text.RegularExpressions;
 
 namespace day20
 {
-    public struct Tile
-    {
-        public int Id;
-        public char[,] Map;
-    }
-
     public class InputParser
     {
         internal static List<Tile> Parse(string filename)
@@ -24,35 +18,31 @@ namespace day20
             var map = new List<string>();
 
             foreach (var line in lines)
-            {
                 if (line == string.Empty)
                 {
-                    var mapSave = new char[map.Count, map[0].Length];
-                    for (var y = 0; y < map.Count; y++)
-                        for (var x = 0; x < map[0].Length; x++)
-                            mapSave[y, x] = map[y][x];
-                    tile.Map = mapSave;
+                    tile.Map = WriteMap(map);
                     tiles.Add(tile);
                     tile = new Tile();
-                    map = new List<string>();
+                    map.Clear();
                 }
                 else if (line.StartsWith("Tile"))
-                {
-                    var match = regex.Match(line);
-                    tile.Id = int.Parse(match.Groups["id"].Value);
-                }
+                    tile.Id = int.Parse(regex.Match(line).Groups["id"].Value);
                 else
                     map.Add(line);
-            }
 
-            var mapSave2 = new char[map.Count, map[0].Length];
-            for (var y = 0; y < map.Count; y++)
-                for (var x = 0; x < map[0].Length; x++)
-                    mapSave2[y, x] = map[y][x];
-            tile.Map = mapSave2;
+            tile.Map = WriteMap(map);
             tiles.Add(tile);
 
             return tiles;
+        }
+
+        private static char[,] WriteMap(List<string> map)
+        {
+            var result = new char[map.Count, map[0].Length];
+            for (var y = 0; y < map.Count; y++)
+                for (var x = 0; x < map[0].Length; x++)
+                    result[y, x] = map[y][x];
+            return result;
         }
 
         public static List<int> ParseCSV(string filename)
