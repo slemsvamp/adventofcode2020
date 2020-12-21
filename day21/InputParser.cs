@@ -5,31 +5,32 @@ using System.Text;
 
 namespace day21
 {
+    public struct Food
+    {
+        public string[] Contains;
+        public string[] Ingredients;
+    }
+
     public class InputParser
     {
-        internal static List<int> Parse(string filename)
+        internal static List<Food> Parse(string filename)
         {
             string[] lines = File.ReadAllLines(filename);
-            List<int> numbers = new List<int>();
+            var foods = new List<Food>();
 
             foreach (var line in lines)
             {
-                numbers.Add(int.Parse(line));
+                int index = line.IndexOf('(');
+                var food = new Food
+                {
+                    Contains = line.Substring(index).Replace("(contains ", "").Trim(')').Split(new[] { ", " }, StringSplitOptions.None),
+                    Ingredients = line.Substring(0, index - 1).Split(' ')
+                };
+                foods.Add(food);
             }
 
-            return numbers;
+            return foods;
         }
 
-        public static List<int> ParseCSV(string filename)
-        {
-            var lines = File.ReadAllLines(filename);
-
-            var numbers = new List<int>();
-            var numberStrings = lines[0].Split(new[] { "," }, StringSplitOptions.None);
-
-            Array.ForEach(numberStrings, n => numbers.Add(int.Parse(n)));
-
-            return numbers;
-        }
     }
 }
