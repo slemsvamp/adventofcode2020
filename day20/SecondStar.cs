@@ -8,6 +8,7 @@ namespace day20
 {
     public class SecondStar
     {
+        #region Models
         public class MapTile
         {
             public Tile Self;
@@ -57,12 +58,33 @@ namespace day20
             }
         }
 
+        public struct Match
+        {
+            public bool Up;
+            public bool Down;
+            public bool Left;
+            public bool Right;
+        }
+
+        public struct MatchInfo
+        {
+            public int Source;
+            public int Target;
+            public byte Rotation;
+            public byte Horizontal;
+            public byte Vertical;
+            public Direction Direction;
+        }
+        #endregion
+
         private static Dictionary<int, char[,]> _memo;
         private static List<MapTile> _maptiles;
 
         private static string[] _seaMonster;
         private static char[,] _board;
         private static int[,] _mapIds;
+        public static int _maxBoardWriteX = 0;
+        public static int _maxBoardWriteY = 0;
 
         public static string Run(List<Tile> input)
         {
@@ -203,11 +225,72 @@ namespace day20
                     break;
             }
 
-            //DrawMapToBoard(tiles[1427].Map, x + 8, y + 8);
+            var restOfTiles = new Dictionary<int, Tile>();
 
-            //_board = Flip(_board, 0, 1);
-            //_board = Rotate(_board, 1);
-            //_board = Flip(_board, 1, 0);
+            foreach (var keyValuePair in tiles)
+            {
+                if (!cornersAndEdges.Corners.Contains(keyValuePair.Key) && !cornersAndEdges.Edges.Contains(keyValuePair.Key))
+                    restOfTiles.Add(keyValuePair.Key, keyValuePair.Value);
+            }
+
+            y = 8;
+
+            for (int middleY = 1; middleY < _mapIds.GetLength(0) - 1; middleY++)
+            {
+                x = 8;
+
+                for (int middleX = 1; middleX < _mapIds.GetLength(1) - 1; middleX++)
+                {
+                    int aboveTileId = _mapIds[middleY - 1, middleX];
+                    var tileKeysToRemove = new HashSet<int>();
+
+                    foreach (var tile in restOfTiles)
+                    {
+                        var combinations = CheckCombinations(tiles[aboveTileId], tile.Value);
+
+                        if (combinations.Count > 0)
+                        {
+                            var match = combinations.First(c => c.Direction == Direction.Down);
+
+                            var map = tile.Value.Map;
+                            if (match.Rotation > 0)
+                                map = Rotate(map, match.Rotation);
+                            if (match.Horizontal > 0 || match.Vertical > 0)
+                                map = Flip(map, match.Horizontal, match.Vertical);
+
+                            tileKeysToRemove.Add(tile.Key);
+                            _mapIds[middleY, middleX] = tile.Key;
+
+                            tiles[tile.Key] = new Tile
+                            {
+                                Id = tile.Key,
+                                Map = map
+                            };
+
+                            DrawMapToBoard(map, x, y);
+                        }
+                    }
+
+                    foreach (var tileKeyToRemove in tileKeysToRemove)
+                        restOfTiles.Remove(tileKeyToRemove);
+
+                    tileKeysToRemove.Clear();
+                            
+                    x += 8;
+                }
+
+                y += 8;
+            }
+
+            // TO REFACTOR:
+            // I tried my way forward, found sea monsters by flipping once and it was correct.
+            // This should ofcourse search through the different options and test for more cases
+            // like most things do in this problem, but I've worked on this for far too long,
+            // so it will be a job for future me.
+
+            // 2020-12-21, me
+
+            _board = Flip(_board, 0, 1);
 
             bool looking = true;
             int lookingX = 0;
@@ -388,9 +471,6 @@ namespace day20
 
             return "";
         }
-
-        public static int _maxBoardWriteX = 0;
-        public static int _maxBoardWriteY = 0;
 
         public static string CountRoughSea()
         {
@@ -613,14 +693,6 @@ namespace day20
             Console.WriteLine();
         }
 
-        public struct Match
-        {
-            public bool Up;
-            public bool Down;
-            public bool Left;
-            public bool Right;
-        }
-
         private static Match CheckAllMatches(Tile source, Tile target)
         {
             var result = new Match();
@@ -660,16 +732,6 @@ namespace day20
                     }
 
             return result;
-        }
-
-        public struct MatchInfo
-        {
-            public int Source;
-            public int Target;
-            public byte Rotation;
-            public byte Horizontal;
-            public byte Vertical;
-            public Direction Direction;
         }
 
         public static List<MatchInfo> CheckCombinations(Tile source, Tile target)
