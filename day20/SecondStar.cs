@@ -40,10 +40,6 @@ namespace day20
             var masterCorner = cornersAndEdges.MasterCornerId;
             var masterCornerMatch = cornersAndEdges.MasterCornerMatch;
 
-            int nextTileId = masterCorner;
-            bool connecting = true;
-            var links = new HashSet<int>();
-
             int x = 0;
             int y = 0;
 
@@ -62,6 +58,10 @@ namespace day20
             }
 
             DrawMapToBoard(tiles[masterCorner].Map, x, y);
+
+            int nextTileId = masterCorner;
+            bool connecting = true;
+            var links = new HashSet<int>();
 
             Func<List<int>, bool> check = new Func<List<int>, bool>(ces =>
             {
@@ -137,17 +137,10 @@ namespace day20
             var restOfTiles = new Dictionary<int, Tile>();
 
             foreach (var keyValuePair in tiles)
-            {
                 if (!cornersAndEdges.Corners.Contains(keyValuePair.Key) && !cornersAndEdges.Edges.Contains(keyValuePair.Key))
                     restOfTiles.Add(keyValuePair.Key, keyValuePair.Value);
-            }
-
-            y = 8;
 
             for (int middleY = 1; middleY < _mapIds.GetLength(0) - 1; middleY++)
-            {
-                x = 8;
-
                 for (int middleX = 1; middleX < _mapIds.GetLength(1) - 1; middleX++)
                 {
                     int aboveTileId = _mapIds[middleY - 1, middleX];
@@ -170,7 +163,8 @@ namespace day20
                                 Id = tile.Key,
                                 Map = map
                             };
-                            DrawMapToBoard(map, x, y);
+                            
+                            DrawMapToBoard(map, middleX * 8, middleY * 8);
 
                             tileKeysToRemove.Add(tile.Key);
                         }
@@ -180,12 +174,7 @@ namespace day20
                         restOfTiles.Remove(tileKeyToRemove);
 
                     tileKeysToRemove.Clear();
-
-                    x += 8;
                 }
-
-                y += 8;
-            }
 
             var boards = new Dictionary<int, char[,]>();
 
@@ -201,53 +190,9 @@ namespace day20
 
             foreach (var board in boards)
                 if (FindSeamonsters(board.Value) > 0)
-                {
-                    bool looking = true;
-                    int lookingX = 0;
-                    int lookingY = 0;
-
-                    while (looking)
-                    {
-                        Console.Clear();
-
-                        var maxBoardY = Math.Min(lookingY + 49, _board.GetLength(0));
-                        var maxBoardX = Math.Min(lookingX + 80, _board.GetLength(1));
-
-                        for (int boardY = lookingY; boardY < maxBoardY; boardY++)
-                            for (int boardX = lookingX; boardX < maxBoardX; boardX++)
-                            {
-                                var screenX = 1 + boardX - lookingX;
-                                var screenY = 1 + boardY - lookingY;
-
-                                if (screenX > 0 && screenY > 0 && screenX < Console.WindowWidth - 1 && screenY < Console.WindowHeight - 1)
-                                {
-                                    Console.SetCursorPosition(screenX, screenY);
-                                    Console.Write(board.Value[boardY, boardX]);
-                                }
-                            }
-
-                        var key = Console.ReadKey(true);
-
-                        switch (key.Key)
-                        {
-                            case ConsoleKey.UpArrow: lookingY -= 8; break;
-                            case ConsoleKey.DownArrow: lookingY += 8; break;
-                            case ConsoleKey.LeftArrow: lookingX -= 8; break;
-                            case ConsoleKey.RightArrow: lookingX += 8; break;
-                            case ConsoleKey.Q: looking = false; break;
-                        }
-
-                        if (lookingY < 0) lookingY = 0;
-                        if (lookingY > maxBoardY - 7) lookingY = maxBoardY - 7;
-                        if (lookingX < 0) lookingX = 0;
-                        if (lookingX > maxBoardX - 7) lookingX = maxBoardX - 7;
-                    }
-
-
                     return CountRoughSea(board.Value);
-                }
 
-            return "Failed to find any seamonsters!";
+            return "Failed to find any seamonsters! This ofcourse, NEVER happens! :)";
         }
 
         private static int FindSeamonsters(char[,] board)
@@ -276,8 +221,8 @@ namespace day20
             for (int y = 0; y < board.GetLength(0); y++)
                 for (int x = 0; x < board.GetLength(1); x++)
                 {
-                    if (x + _seaMonster[0].Length >= board.GetLength(1)
-                        || y + _seaMonster.Length >= board.GetLength(0)
+                    if (x + _seaMonster[0].Length >= board.GetLength(0)
+                        || y + _seaMonster.Length >= board.GetLength(1)
                         || !checkForSeamonster(x, y, board))
                         continue;
                     else
@@ -307,64 +252,6 @@ namespace day20
             for (int yIndex = y; yIndex < y + 8; yIndex++)
                 for (int xIndex = x; xIndex < x + 8; xIndex++)
                     _board[yIndex, xIndex] = map[yIndex - y + 1, xIndex - x + 1];
-        }
-
-        private static void ConnectingEdges(int cornerId, Dictionary<int, Tile> tiles,
-            Dictionary<int, List<Connection>> connections, List<int> edges, Dictionary<int, List<MatchInfo>> memo)
-        {
-            foreach (var connection in connections[cornerId])
-            {
-                var edgeId = connection.TargetId;
-                var edgeTile = tiles[edgeId];
-
-                bool search = true;
-                int previous = -1;
-
-                while (search)
-                {
-                    var matches = new List<MatchInfo>();
-                    foreach (var edge in edges)
-                    {
-                        if (edge == edgeTile.Id)
-                            continue;
-
-                        if (edge == previous)
-                            continue;
-
-                        var combinations = new List<MatchInfo>();
-                        var key = HashCode.Combine(edgeTile.Id, edge);
-                        if (memo.ContainsKey(key))
-                            combinations = memo[key];
-                        else
-                        {
-                            combinations = TileMatcher.CheckAllCombinations(edgeTile, tiles[edge], _memo);
-                            memo.Add(key, combinations);
-                        }
-
-                        foreach (var combination in combinations)
-                            matches.Add(combination);
-                    }
-
-                    if (matches.Count > 0)
-                    {
-                        var distinct = matches.Select(m => m.Target).Distinct();
-
-                        if (distinct.Count() == 1)
-                        {
-                            var connectingId = distinct.First();
-
-                            if (!connections.ContainsKey(edgeTile.Id))
-                                connections.Add(edgeTile.Id, new List<Connection>());
-                            connections[edgeTile.Id].Add(new Connection(edgeTile.Id, connectingId, matches.First().Direction, "Edge", "Edge"));
-
-                            previous = edgeTile.Id;
-                            edgeTile = tiles[connectingId];
-                        }
-                    }
-                    else
-                        search = false;
-                }
-            }
         }
 
         private static CornersAndEdges FindCornersAndEdges(List<Tile> tiles)

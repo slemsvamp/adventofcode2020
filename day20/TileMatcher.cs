@@ -14,35 +14,48 @@ namespace day20
         /// <param name="target">The tile that we attempt to fit onto each side of the source tile.</param>
         /// <param name="memo">If you want the tile permutations in a memo, this one will be filled. The hash is combined through tile Id and permutation index.</param>
         /// <returns></returns>
-        public static List<MatchInfo> CheckAllCombinations(Tile source, Tile target, Dictionary<int, char[,]> memo = null)
+        public static List<MatchInfo> CheckAllCombinations(Tile source, Tile target, Dictionary<int, char[,]> memo)
         {
             var result = new List<MatchInfo>();
-            var localMemo = new Dictionary<int, char[,]>();
+            //var localMemo = new Dictionary<int, char[,]>();
             var maps = new List<char[,]>();
             var firstPermutationKey = HashCode.Combine(target.Id, 0);
+            var secondPermutationKey = HashCode.Combine(target.Id, 1);
 
             if (memo != null && memo.ContainsKey(firstPermutationKey))
                 for (int permutation = 0; permutation < 8; permutation++)
                     maps.Add(memo[HashCode.Combine(target.Id, permutation)]);
             else
             {
-                localMemo.Add(firstPermutationKey, target.Map.Copy());
-                localMemo.Add(HashCode.Combine(target.Id, 1), target.Map.Flip());
+                memo.Add(firstPermutationKey, target.Map.Copy());
+                maps.Add(memo[firstPermutationKey]);
+                
+                memo.Add(secondPermutationKey, target.Map.Flip());
+                maps.Add(memo[secondPermutationKey]);
+
                 for (int permutation = 2; permutation < 8; permutation++)
                 {
                     var key = HashCode.Combine(target.Id, permutation);
                     if (permutation % 2 == 0)
-                        localMemo.Add(key, localMemo[HashCode.Combine(target.Id, permutation - 2)].Rotate());
+                    {
+                        var minusTwo = HashCode.Combine(target.Id, permutation - 2);
+                        memo.Add(key, memo[minusTwo].Rotate());
+                        maps.Add(memo[key]);
+                    }
                     else
-                        localMemo.Add(key, localMemo[HashCode.Combine(target.Id, permutation - 1)].Flip());
+                    {
+                        var minusOne = HashCode.Combine(target.Id, permutation - 1);
+                        memo.Add(key, memo[minusOne].Flip());
+                        maps.Add(memo[key]);
+                    }
                 }
 
-                if (memo != null)
-                    foreach (var kvp in localMemo)
-                        memo.Add(kvp.Key, kvp.Value);
+                //if (memo != null)
+                //    foreach (var kvp in localMemo)
+                //        memo.Add(kvp.Key, kvp.Value);
 
-                foreach (var map in localMemo.Values)
-                    maps.Add(map);
+                //foreach (var map in localMemo.Values)
+                //    maps.Add(map);
             }
 
             {

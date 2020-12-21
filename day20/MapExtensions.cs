@@ -27,15 +27,6 @@ namespace day20
 
         public static bool MatchLeft(this char[,] source, char[,] target)
         {
-            var rightX = source.GetLength(1) - 1;
-            for (int y = 0; y < target.GetLength(0); y++)
-                if (source[y, rightX] != target[y, 0])
-                    return false;
-            return true;
-        }
-
-        public static bool MatchRight(this char[,] source, char[,] target)
-        {
             var rightX = target.GetLength(1) - 1;
             for (int y = 0; y < target.GetLength(0); y++)
                 if (source[y, 0] != target[y, rightX])
@@ -43,48 +34,55 @@ namespace day20
             return true;
         }
 
-
-        public static void Draw(this char[,] map, Point at)
+        public static bool MatchRight(this char[,] source, char[,] target)
         {
-            for (var y = 0; y < map.GetLength(0); y++)
-                for (var x = 0; x < map.GetLength(1); x++)
+            var rightX = source.GetLength(1) - 1;
+            for (int y = 0; y < target.GetLength(0); y++)
+                if (source[y, rightX] != target[y, 0])
+                    return false;
+            return true;
+        }
+
+        public static void Draw(this char[,] source, Point at)
+        {
+            for (var y = 0; y < source.GetLength(0); y++)
+                for (var x = 0; x < source.GetLength(1); x++)
                 {
                     Console.SetCursorPosition(at.X + x, at.Y + y);
-                    Console.Write(map[y, x]);
+                    Console.Write(source[y, x]);
                 }
         }
 
         public static char[,] Copy(this char[,] source)
         {
-            (int mapY, int mapX) = (source.GetLength(0), source.GetLength(1));
-            var result = new char[mapY, mapX];
+            (int maxY, int maxX) = (source.GetLength(0), source.GetLength(1));
+            var result = new char[maxY, maxX];
 
-            for (int y = 0; y < mapY; y++)
-                for (int x = 0; x < mapX; x++)
+            for (int y = 0; y < maxY; y++)
+                for (int x = 0; x < maxX; x++)
                     result[y, x] = source[y, x];
             return result;
         }
 
-        public static char[,] Rotate(this char[,] map)
+        public static char[,] Rotate(this char[,] source)
         {
-            (int mapY, int mapX) = (map.GetLength(0), map.GetLength(1));
-            var result = new char[mapY, mapX];
+            (int maxY, int maxX) = (source.GetLength(0), source.GetLength(1));
+            var result = new char[maxY, maxX];
 
-            for (int y = 0; y < mapY; y++)
-                for (int x = 0; x < mapX; x++)
-                    result[x, mapX - y - 1] = map[y, x];
+            for (int y = 0; y < maxY; y++)
+                for (int x = 0; x < maxX; x++)
+                    result[x, maxX - y - 1] = source[y, x];
             return result;
         }
 
-        public static char[,] Flip(this char[,] map)
+        public static char[,] Flip(this char[,] source)
         {
-            (int mapY, int mapX) = (map.GetLength(0), map.GetLength(1));
+            (int maxY, int maxX) = (source.GetLength(0), source.GetLength(1));
 
-            var result = new char[mapY, mapX];
-
-                for (int y = 0; y < mapY; y++)
-                    for (int x = 0; x < mapX; x++)
-                        result[y, mapX - x - 1] = map[y, x];
+            var result = new char[maxY, maxX];
+                for (int y = 0; y < maxY; y++)
+                    for (int x = 0; x < maxX; x++)
+                        result[y, maxX - x - 1] = source[y, x];
             return result;
         }
 
