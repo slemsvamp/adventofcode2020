@@ -5,31 +5,41 @@ using System.Text;
 
 namespace day22
 {
+    public class Player
+    {
+        public int Id;
+        public LinkedList<int> Cards;
+    }
+
     public class InputParser
     {
-        internal static List<int> Parse(string filename)
+        internal static List<Player> Parse(string filename)
         {
             string[] lines = File.ReadAllLines(filename);
-            List<int> numbers = new List<int>();
+
+            var players = new List<Player>();
+            var player = new Player();
+            var cards = new List<int>();
 
             foreach (var line in lines)
             {
-                numbers.Add(int.Parse(line));
+                if(line.StartsWith("Player"))
+                    player.Id = int.Parse(line.Replace("Player ", "").Trim(':'));
+                else if (line == string.Empty)
+                {
+                    player.Cards = new LinkedList<int>(cards);
+                    players.Add(player);
+                    cards = new List<int>();
+                    player = new Player();
+                }
+                else
+                    cards.Add(int.Parse(line));
             }
 
-            return numbers;
-        }
+            player.Cards = new LinkedList<int>(cards);
+            players.Add(player);
 
-        public static List<int> ParseCSV(string filename)
-        {
-            var lines = File.ReadAllLines(filename);
-
-            var numbers = new List<int>();
-            var numberStrings = lines[0].Split(new[] { "," }, StringSplitOptions.None);
-
-            Array.ForEach(numberStrings, n => numbers.Add(int.Parse(n)));
-
-            return numbers;
+            return players;
         }
     }
 }
