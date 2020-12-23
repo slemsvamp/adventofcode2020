@@ -9,7 +9,7 @@ namespace day23
             var input = InputParser.Parse("input.txt");
 
             Console.WriteLine("---- Part 01 ----");
-            var part1 = FirstStar.Run(input);
+            var part1 = FirstStar.Run();
             Console.WriteLine($"Result: {part1}");
 
             Console.WriteLine("---- Part 02 ----");
